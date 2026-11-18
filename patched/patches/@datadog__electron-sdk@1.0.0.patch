@@ -1,0 +1,67 @@
+Local modifications to @datadog/electron-sdk 1.0.0.
+
+Resolve transitive runtime dependencies from each package's own node_modules
+when copying the package tree into the app bundle. Since 1.0.0 the copy only
+runs with `copyRuntimeDependencies: true`, which our Vite config opts into,
+and upstream still resolves every dependency from the SDK's own location.
+
+diff --git a/dist/vite-plugin.cjs b/dist/vite-plugin.cjs
+--- a/dist/vite-plugin.cjs
++++ b/dist/vite-plugin.cjs
+@@ -77,13 +77,13 @@
+             return;
+         const destModules = node_path.join(outDir, 'node_modules');
+         const visited = new Set();
+-        function copyPackageTree(pkg) {
++        function copyPackageTree(pkg, resolveFrom = _require) {
+             if (visited.has(pkg))
+                 return;
+             visited.add(pkg);
+             try {
+                 // Resolve the package's main entry, then walk up to find the root
+-                const entryPath = _require.resolve(pkg);
++                const entryPath = resolveFrom.resolve(pkg);
+                 let pkgDir = node_path.dirname(entryPath);
+                 while (pkgDir !== node_path.dirname(pkgDir) && !node_fs.existsSync(node_path.join(pkgDir, 'package.json'))) {
+                     pkgDir = node_path.dirname(pkgDir);
+@@ -95,8 +95,9 @@
+                 }
+                 // Recursively copy runtime dependencies
+                 const pkgJson = JSON.parse(node_fs.readFileSync(node_path.join(pkgDir, 'package.json'), 'utf8'));
++                const packageRequire = node_module.createRequire(node_path.join(pkgDir, 'package.json'));
+                 for (const dep of Object.keys(pkgJson.dependencies ?? {})) {
+-                    copyPackageTree(dep);
++                    copyPackageTree(dep, packageRequire);
+                 }
+             }
+             catch {
+diff --git a/dist/vite-plugin.mjs b/dist/vite-plugin.mjs
+--- a/dist/vite-plugin.mjs
++++ b/dist/vite-plugin.mjs
+@@ -74,13 +74,13 @@
+             return;
+         const destModules = join(outDir, 'node_modules');
+         const visited = new Set();
+-        function copyPackageTree(pkg) {
++        function copyPackageTree(pkg, resolveFrom = _require) {
+             if (visited.has(pkg))
+                 return;
+             visited.add(pkg);
+             try {
+                 // Resolve the package's main entry, then walk up to find the root
+-                const entryPath = _require.resolve(pkg);
++                const entryPath = resolveFrom.resolve(pkg);
+                 let pkgDir = dirname(entryPath);
+                 while (pkgDir !== dirname(pkgDir) && !existsSync(join(pkgDir, 'package.json'))) {
+                     pkgDir = dirname(pkgDir);
+@@ -92,8 +92,9 @@
+                 }
+                 // Recursively copy runtime dependencies
+                 const pkgJson = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
++                const packageRequire = createRequire(join(pkgDir, 'package.json'));
+                 for (const dep of Object.keys(pkgJson.dependencies ?? {})) {
+-                    copyPackageTree(dep);
++                    copyPackageTree(dep, packageRequire);
+                 }
+             }
+             catch {

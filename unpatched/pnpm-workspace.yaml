@@ -1,0 +1,13 @@
+autoInstallPeers: false
+autoDedupe: true
+strictDepBuilds: true
+overrides:
+  '@datadog/electron-sdk>dd-trace': 6.20.1
+allowBuilds:
+  '@datadog/native-appsec': false
+  '@datadog/native-iast-taint-tracking': false
+  '@datadog/native-metrics': false
+  '@datadog/pprof': false
+  dd-trace: false
+  electron: false
+  esbuild: false

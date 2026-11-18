@@ -1,0 +1,11 @@
+{
+  "name": "dd-electron-repro",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@datadog/electron-sdk": "1.0.0",
+    "dd-trace": "5.131.1",
+    "electron": "45.2.3",
+    "vite": "8.3.2"
+  }
+}

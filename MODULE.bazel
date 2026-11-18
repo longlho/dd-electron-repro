@@ -1,0 +1,23 @@
+module(name = "dd_electron_repro")
+
+# Pinned to the same versions as ppl-ai/agi.
+bazel_dep(name = "aspect_rules_js", version = "3.5.2")
+bazel_dep(name = "rules_nodejs", version = "6.7.5")
+bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
+
+node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
+node.toolchain(node_version = "26.10.0")
+
+npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
+
+[npm.npm_translate_lock(
+    name = "npm_" + v,
+    pnpm_lock = "//{}:pnpm-lock.yaml".format(v),
+    data = ["//{}:package.json".format(v), "//{}:pnpm-workspace.yaml".format(v)] + (
+        ["//patched:patches/@datadog__electron-sdk@1.0.0.patch"] if v == "patched" else []
+    ),
+    lifecycle_hooks_envs = {"electron": ["ELECTRON_SKIP_BINARY_DOWNLOAD=1"]},
+    lifecycle_hooks_exclude = ["electron", "esbuild", "dd-trace", "@datadog/native-appsec", "@datadog/native-iast-taint-tracking", "@datadog/native-metrics", "@datadog/pprof"],
+) for v in ["unpatched", "patched"]]
+
+use_repo(npm, "npm_unpatched", "npm_patched")
